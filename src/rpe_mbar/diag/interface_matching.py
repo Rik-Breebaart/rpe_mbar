@@ -1,5 +1,5 @@
 import numpy as np
-from ..data.loaders import weights_split_into_sets
+from ..core.solver_prep import weights_split_into_sets
 
 def recrossings_TIS_interface(cv_function, interface_value, data_max_values, dataset_forward_descriptors, weights):
     # Collect weighted descriptors

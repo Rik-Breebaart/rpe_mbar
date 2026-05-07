@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Dict, List, Tuple
-from ..data.loaders import dict_to_solver_inputs_for_multiset
+from ..core.solver_prep import dict_to_solver_inputs_for_multiset
 from .multiset import solve_multi_set_mbar_matrix
 
 def solve_weights_multiset(
