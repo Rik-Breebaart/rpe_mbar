@@ -31,7 +31,19 @@ def get_descriptors_and_weights(
     state_axis: int = 0,
     state_boundary_A: float = -0.9,
     state_boundary_B: float = 0.9,
+    state_fn_A: Optional[Callable] = None,
+    state_fn_B: Optional[Callable] = None,
 ):
+    """Assemble per-snapshot descriptors and MBAR weights.
+
+    Parameters
+    ----------
+    state_fn_A, state_fn_B : callable, optional
+        Functions that take a 1-D descriptor array (one trajectory frame) and
+        return True when the frame is in state A (or B).  When provided these
+        replace the 1-D ``state_axis`` / ``state_boundary_A/B`` check, enabling
+        multi-dimensional (e.g. rectangular) state definitions.
+    """
     weights_each_set_iface = weights_split_into_sets(weights_combined, data_max_values)
 
     descriptors, weights, shot_results = [], [], []
@@ -59,20 +71,28 @@ def get_descriptors_and_weights(
                         n_AB_calculated += 1
                     elif shot_result_traj[0,0] == 0 and shot_result_traj[0,1] == 2:
                         n_BB_calculated += 1
-                else: 
-                    #TODO: this logic currently only works with 1d state functions, needs fix to extent to multi-dim state functions (still based on cv values in descriptor storage)
-                    start_val = trajectory[0, state_axis]
-                    end_val = trajectory[-1, state_axis]
-                    if start_val < state_boundary_A and end_val < state_boundary_A:
+                else:
+                    # Determine state membership at trajectory endpoints.
+                    # Multi-dimensional: use state_fn_A/B callables if provided.
+                    # Fallback: 1-D threshold on state_axis (legacy behaviour).
+                    if state_fn_A is not None and state_fn_B is not None:
+                        in_A_start = bool(state_fn_A(trajectory[0]))
+                        in_A_end   = bool(state_fn_A(trajectory[-1]))
+                        in_B_start = bool(state_fn_B(trajectory[0]))
+                        in_B_end   = bool(state_fn_B(trajectory[-1]))
+                    else:
+                        in_A_start = trajectory[0, state_axis] < state_boundary_A
+                        in_A_end   = trajectory[-1, state_axis] < state_boundary_A
+                        in_B_start = trajectory[0, state_axis] > state_boundary_B
+                        in_B_end   = trajectory[-1, state_axis] > state_boundary_B
+
+                    if in_A_start and in_A_end:
                         n_AA_calculated += 1
                         shot_result = [2, 0]
-                    elif (
-                        (start_val < state_boundary_A and end_val > state_boundary_B)
-                        or (start_val > state_boundary_B and end_val < state_boundary_A)
-                    ):
+                    elif (in_A_start and in_B_end) or (in_B_start and in_A_end):
                         n_AB_calculated += 1
                         shot_result = [1, 1]
-                    elif start_val > state_boundary_B and end_val > state_boundary_B:
+                    elif in_B_start and in_B_end:
                         n_BB_calculated += 1
                         shot_result = [0, 2]
                     else:
