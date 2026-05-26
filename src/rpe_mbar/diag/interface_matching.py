@@ -21,11 +21,39 @@ def recrossings_TIS_interface(cv_function, interface_value, data_max_values, dat
                         weighted_recrossings += weights_each_set_iface[origin_set][iface][traj_idx]
     return recrossings, weighted_recrossings
 
-def compute_cv_all_sets(cv_function_list, trajectory, set_names=None):
-    cv_values_all_sets = np.zeros((len(cv_function_list), trajectory.shape[0]))
+def compute_cv_all_sets(
+    cv_function_list,
+    trajectory,
+    descriptor_arrays=None,
+    descriptor_keys=None,
+    set_names=None,
+):
+    """Evaluate each CV function on its corresponding descriptor array.
+
+    Parameters
+    ----------
+    cv_function_list : list of callable
+        One function per interface set; each maps (n_frames, n_feat) -> (n_frames,).
+    trajectory : np.ndarray, shape (n_frames, n_feat)
+        Fallback descriptor array used when *descriptor_arrays* is None.
+    descriptor_arrays : dict {key: np.ndarray}, optional
+        Per-key descriptor arrays.  When provided together with *descriptor_keys*,
+        function ``i`` is applied to ``descriptor_arrays[descriptor_keys[i]]``
+        instead of *trajectory*.
+    descriptor_keys : list of str, optional
+        One descriptor key per entry in *cv_function_list*.
+    """
+    if descriptor_arrays is not None and descriptor_keys is not None:
+        n_frames = next(iter(descriptor_arrays.values())).shape[0]
+    else:
+        n_frames = trajectory.shape[0]
+    cv_values_all_sets = np.zeros((len(cv_function_list), n_frames))
     for i, cv_function in enumerate(cv_function_list):
-        cv_values = cv_function(trajectory)
-        cv_values_all_sets[i, :] = cv_values
+        if descriptor_arrays is not None and descriptor_keys is not None:
+            desc = descriptor_arrays[descriptor_keys[i]]
+        else:
+            desc = trajectory
+        cv_values_all_sets[i, :] = cv_function(desc)
     return cv_values_all_sets
 
 

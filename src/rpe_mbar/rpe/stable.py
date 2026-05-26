@@ -25,9 +25,12 @@ def _unpack_stable_payload(payload: Any) -> Dict[str, Any]:
         merged["meta"] = {**payload[0], **merged.get("meta", {})}
         return merged
     if isinstance(payload, dict):
+        raw_desc = payload.get("descriptors")
+        # Preserve dict format {key: [desc_A, desc_B]} used for per-set descriptor keys.
+        descriptors_field = raw_desc if isinstance(raw_desc, dict) else _coerce_array_list(raw_desc)
         return {
             "meta": payload.get("meta", {}),
-            "descriptors": _coerce_array_list(payload.get("descriptors")),
+            "descriptors": descriptors_field,
             "weights": _coerce_array_list(payload.get("weights")),
             "shot_results": _coerce_array_list(payload.get("shot_results")),
             "in_state_flags": _coerce_array_list(payload.get("in_state_flags")) if len(payload.get("in_state_flags", [])) > 0 else None,
@@ -174,9 +177,20 @@ def compute_flux_compensation_stable_states_multiple_interfaces(
     state_threshold_A: Optional[float] = None,
     state_threshold_B: Optional[float] = None,
     name_lambda_functions: Optional[Sequence[str]] = None,
+    descriptor_keys: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     payload = _unpack_stable_payload(data_stable)
-    descriptors = payload.get("descriptors") or []
+    raw_descriptors = payload.get("descriptors")
+
+    # Support dict format {desc_key: [desc_A, desc_B]} for per-function descriptor arrays.
+    if isinstance(raw_descriptors, dict):
+        descriptors_dict: Optional[Dict] = raw_descriptors
+        # Use the first key's list as the reference for in-state inference and the loop.
+        descriptors = next(iter(raw_descriptors.values()))
+    else:
+        descriptors_dict = None
+        descriptors = raw_descriptors or []
+
     if len(descriptors) < 2:
         raise ValueError("Expected at least two stable-state descriptor arrays (A and B).")
 
@@ -205,7 +219,13 @@ def compute_flux_compensation_stable_states_multiple_interfaces(
             )
 
         in_state = in_state_lists[state_idx]
-        cv_series_list = [np.asarray(f(desc), dtype=float) for f in cv_functions]
+        if descriptors_dict is not None and descriptor_keys is not None:
+            cv_series_list = [
+                np.asarray(f(descriptors_dict[key][state_idx]), dtype=float).ravel()
+                for f, key in zip(cv_functions, descriptor_keys)
+            ]
+        else:
+            cv_series_list = [np.asarray(f(desc), dtype=float).ravel() for f in cv_functions]
         leaves = _count_state_leaves(in_state)
         leaves_per_state.append(leaves)
 
@@ -240,9 +260,18 @@ def compute_multi_interface_passed_flags(
     first_interfaces_forward: List[float],
     first_interfaces_backward: List[float],
     in_state_flags: Sequence[np.ndarray],
+    descriptor_keys: Optional[Sequence[str]] = None,
 ) -> List[np.ndarray]:
     payload = _unpack_stable_payload(data_stable)
-    descriptors = payload.get("descriptors") or []
+    raw_descriptors = payload.get("descriptors")
+
+    if isinstance(raw_descriptors, dict):
+        descriptors_dict: Optional[Dict] = raw_descriptors
+        descriptors = next(iter(raw_descriptors.values()))
+    else:
+        descriptors_dict = None
+        descriptors = raw_descriptors or []
+
     if len(descriptors) == 0:
         return []
 
@@ -252,7 +281,11 @@ def compute_multi_interface_passed_flags(
         current = np.ones(desc.shape[0], dtype=bool)
         for set_idx, interface_function in enumerate(interface_function_sets):
             threshold = first_interfaces_forward[set_idx] if direction == "forward" else first_interfaces_backward[set_idx]
-            values = np.asarray(interface_function(desc), dtype=float)
+            if descriptors_dict is not None and descriptor_keys is not None:
+                eval_desc = descriptors_dict[descriptor_keys[set_idx]][state_idx]
+            else:
+                eval_desc = desc
+            values = np.asarray(interface_function(eval_desc), dtype=float).ravel()
             if direction == "forward":
                 current &= values <= threshold
             else:

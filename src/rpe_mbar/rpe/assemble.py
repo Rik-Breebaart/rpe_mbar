@@ -117,6 +117,10 @@ def build_reweighted_rpe_trainset(
     cutoff_beyond_joined_interface: bool = True,
     name_lambda_functions: Optional[Sequence[str]] = None,
     c_AB: Optional[float] = None,
+    interface_descriptor_keys: Optional[Sequence[str]] = None,
+    descriptor_arrays_f: Optional[Dict[str, np.ndarray]] = None,
+    descriptor_arrays_b: Optional[Dict[str, np.ndarray]] = None,
+    training_descriptor_key: Optional[str] = None,
 ):
     if c_AB is None:
         if counts_b[1] == 0:
@@ -133,6 +137,7 @@ def build_reweighted_rpe_trainset(
         state_threshold_A=state_threshold_A,
         state_threshold_B=state_threshold_B,
         name_lambda_functions=name_lambda_functions,
+        descriptor_keys=interface_descriptor_keys,
     )
 
     before_interface_set_all = compute_multi_interface_passed_flags(
@@ -141,11 +146,20 @@ def build_reweighted_rpe_trainset(
         first_interfaces_forward=list(first_interfaces_forward),
         first_interfaces_backward=list(first_interfaces_backward),
         in_state_flags=multi_flux["in_state_flags"],
+        descriptor_keys=interface_descriptor_keys,
     )
 
     if cutoff_beyond_joined_interface:
-        cvs_all_forward = compute_cv_all_sets(list(interface_functions), desc_f)
-        cvs_all_backward = compute_cv_all_sets(list(interface_functions), desc_b)
+        cvs_all_forward = compute_cv_all_sets(
+            list(interface_functions), desc_f,
+            descriptor_arrays=descriptor_arrays_f,
+            descriptor_keys=interface_descriptor_keys,
+        )
+        cvs_all_backward = compute_cv_all_sets(
+            list(interface_functions), desc_b,
+            descriptor_arrays=descriptor_arrays_b,
+            descriptor_keys=interface_descriptor_keys,
+        )
 
         idx_beyond_f = index_beyond_joined_interface(
             cvs_all_forward,
@@ -165,7 +179,6 @@ def build_reweighted_rpe_trainset(
         idx_beyond_f = np.arange(len(desc_f))
         idx_beyond_b = np.arange(len(desc_b))
 
-
     weights_sum_forward = float(np.sum(w_f / np.min(w_f)))
     weights_sum_backward = float(np.sum(w_b / np.min(w_b)))
     n_eff_A = len(multi_flux["first_crossings"][0])
@@ -178,6 +191,17 @@ def build_reweighted_rpe_trainset(
 
     weight_factors = [weights_sum_forward/n_eff_A, c_AB*weights_sum_backward/n_eff_B]
 
+    # Resolve training descriptors: when data_stable["descriptors"] is a per-key dict,
+    # extract the training key; otherwise fall back to the plain list.
+    stable_descriptors = data_stable.get("descriptors") if isinstance(data_stable, dict) else None
+    if isinstance(stable_descriptors, dict):
+        if training_descriptor_key is None:
+            raise ValueError(
+                "training_descriptor_key must be provided when data_stable['descriptors'] "
+                "is a dict of {descriptor_key: [desc_A, desc_B]}."
+            )
+        stable_descriptors = stable_descriptors[training_descriptor_key]
+
     descriptors_total, weights_total, shot_results_total = create_total_trainset(
         desc_f[idx_beyond_f],
         w_f[idx_beyond_f],
@@ -186,7 +210,7 @@ def build_reweighted_rpe_trainset(
         w_b[idx_beyond_b],
         shot_b[idx_beyond_b],
         c_AB,
-        data_stable["descriptors"],
+        stable_descriptors,
         before_interface_set_all,
         weight_factors=weight_factors,
         load_stable=True,
