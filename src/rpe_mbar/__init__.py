@@ -4,7 +4,7 @@ from .core.multiset import solve_two_set_mbar_matrix, solve_multi_set_mbar_matri
 from .core.solvers import solve_weights_multiset, solve_weights_naive_concat
 from .core.solver_prep import dict_to_solver_inputs_for_multiset, weights_split_into_sets
 from .utils.tools import robust_flatten, format_interface_value
-from .diag.crossing import conditional_crossing_histogram, cumulative_crossing_histogram, bootstrap_crossing_probs, bootstrap_crossing_probs_naive_weighting
+from .diag.crossing import conditional_crossing_histogram, cumulative_crossing_histogram, bootstrap_crossing_probs, bootstrap_crossing_probs_naive_weighting, plot_bootstrap_cumulative_per_interface
 from .data.specs import InterfaceFunctionSpec, coerce_interface_spec
 from .data.extrema import (
     expected_extrema_columns, validate_extrema_df,
@@ -54,6 +54,7 @@ __all__ = [
     "cumulative_crossing_histogram",
     "bootstrap_crossing_probs",
     "bootstrap_crossing_probs_naive_weighting",
+    "plot_bootstrap_cumulative_per_interface",
     # data specs
     "InterfaceFunctionSpec",
     "coerce_interface_spec",
