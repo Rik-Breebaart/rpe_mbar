@@ -225,10 +225,7 @@ def bootstrap_crossing_probs_naive_weighting(data, interface_0, n_bootstrap=100,
 
     return {"bins": bins_naive, "bootstrap_array": bootstrap_array, "bootstrap_mean": bootstrap_mean, "bootstrap_std": bootstrap_std, "bootstrap_log_mean": bootstrap_log_mean, "bootstrap_log_std": bootstrap_log_std, "bootstrap_single_set": bootstrap_results_single_set, "bootstrap_weights_single_set": bootstrap_weights_single_set if return_weights else None}
 
-def plot_bootstrap_cumulative_per_interface(data,origin_set, interface_values, direction="forward", n_thermalization=30, fig = None, ax = None):
-    N_bootstrap = 100
-    block_size = 10
-    n_bins = np.arange(-1, 1, 0.001)
+def plot_bootstrap_cumulative_per_interface(data,origin_set, interface_values, direction="forward", n_thermalization=30, fig = None, ax = None, N_bootstrap=100, block_size=10, n_bins=np.arange(-1, 1, 0.001)):
     if fig is None or ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(12, 6))
     colors = plt.get_cmap("tab20b")(np.linspace(0, 1, len(interface_values)))
