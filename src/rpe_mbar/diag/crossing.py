@@ -3,6 +3,7 @@ from ensurepip import bootstrap
 from tkinter import N
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from ..core.multiset import solve_multi_set_mbar_matrix
 from ..utils.tools import robust_flatten
 from ..core.solver_prep import dict_to_solver_inputs_for_multiset
@@ -223,3 +224,44 @@ def bootstrap_crossing_probs_naive_weighting(data, interface_0, n_bootstrap=100,
 
 
     return {"bins": bins_naive, "bootstrap_array": bootstrap_array, "bootstrap_mean": bootstrap_mean, "bootstrap_std": bootstrap_std, "bootstrap_log_mean": bootstrap_log_mean, "bootstrap_log_std": bootstrap_log_std, "bootstrap_single_set": bootstrap_results_single_set, "bootstrap_weights_single_set": bootstrap_weights_single_set if return_weights else None}
+
+def plot_bootstrap_cumulative_per_interface(data,origin_set, interface_values, direction="forward", n_thermalization=30, fig = None, ax = None):
+    N_bootstrap = 100
+    block_size = 10
+    n_bins = np.arange(-1, 1, 0.001)
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    colors = plt.get_cmap("tab20b")(np.linspace(0, 1, len(interface_values)))
+
+    for ind, iface in enumerate(interface_values):
+        x = data[origin_set][iface][origin_set]
+        print(x)
+        if direction == "backward":
+            x = -x
+        x_len = len(x)
+        all_y = []
+        for _ in range(N_bootstrap):
+            blocks = [x[i:i + block_size] for i in range(0, len(x) - block_size + 1)]
+            n_blocks = int(np.ceil(x_len / block_size))
+            boot_x = np.concatenate([blocks[np.random.randint(len(blocks))] for _ in range(n_blocks)])[:x_len]
+            n, bins = np.histogram(boot_x, n_bins, density=True)
+            dx = np.diff(bins)
+            y = 1 - np.cumsum(n) * dx
+            all_y.append(y)
+
+        all_y = np.array(all_y)
+        mean_y = all_y.mean(axis=0)
+        std_y = all_y.std(axis=0)
+        xdata = bins[1:]
+
+        color = colors[ind]
+        ax.plot(xdata, mean_y, "-", linewidth=0.5, color="black")
+        ax.fill_between(xdata, mean_y - std_y, mean_y + std_y, color=color, alpha=0.3)
+        # iface_plot = -iface if direction == "backward" else iface
+        # ax.vlines(iface_plot, ymin=0, ymax=1, color=color)
+
+    ax.set_yscale("log")
+    ax.set_ylabel("Probability")
+    ax.set_ylim([0.0001, 1.5])
+    ax.grid(True)
+    return fig, ax
