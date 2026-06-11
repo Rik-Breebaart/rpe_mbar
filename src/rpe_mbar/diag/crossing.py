@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from ..core.multiset import solve_multi_set_mbar_matrix
 from ..utils.tools import robust_flatten
-from ..data.loaders import dict_to_solver_inputs_for_multiset, bootstrap_data, create_reduced_dataset_with_all_targets
+from ..core.solver_prep import dict_to_solver_inputs_for_multiset
+from ..data.sampling import bootstrap_data, create_reduced_dataset_with_all_targets
 
 def conditional_crossing_histogram(max_values, weights, bins=np.linspace(-1, 1, 500), interface_0=None):
     """

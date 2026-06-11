@@ -31,3 +31,14 @@ def find_last_crossed_interfaces(max_values, interface_positions):
     indices = np.clip(indices, -1, len(interface_positions) - 1)
     return indices
 
+
+def format_interface_value(interface_value, scale=1000):
+    """Convert a float interface value to a zero-padded integer string for filenames.
+
+    Example
+    -------
+    >>> format_interface_value(0.45)
+    '0450'
+    """
+    return f"{int(interface_value * scale):04d}"
+

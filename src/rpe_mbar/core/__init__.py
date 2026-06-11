@@ -1,2 +1,3 @@
 from .multiset import solve_two_set_mbar_matrix, solve_multi_set_mbar_matrix
 from .solvers import solve_weights_multiset, solve_weights_naive_concat
+from .solver_prep import dict_to_solver_inputs_for_multiset, weights_split_into_sets
