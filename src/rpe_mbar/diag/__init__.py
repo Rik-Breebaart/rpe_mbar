@@ -1,2 +1,2 @@
-from .crossing import conditional_crossing_histogram, cumulative_crossing_histogram
+from .crossing import conditional_crossing_histogram, cumulative_crossing_histogram, plot_bootstrap_cumulative_per_interface
 from .interface_matching import recrossings_TIS_interface, compute_cv_all_sets, index_beyond_interface, index_beyond_joined_interface
