@@ -126,6 +126,8 @@ def build_reweighted_rpe_trainset(
     w_b: np.ndarray,
     shot_b: np.ndarray,
     counts_b,
+    weights_per_path_f: np.ndarray,
+    weights_per_path_b: np.ndarray,
     data_stable: Dict[str, Any],
     interface_functions: Sequence[Callable[[np.ndarray], np.ndarray]],
     first_interfaces_forward: Sequence[float],
@@ -199,8 +201,8 @@ def build_reweighted_rpe_trainset(
         idx_beyond_f = np.arange(len(desc_f))
         idx_beyond_b = np.arange(len(desc_b))
 
-    weights_sum_forward = float(np.sum(w_f / np.min(w_f)))
-    weights_sum_backward = float(np.sum(w_b / np.min(w_b)))
+    weights_sum_forward = float(np.sum(weights_per_path_f) / np.min(weights_per_path_f))
+    weights_sum_backward = float(np.sum(weights_per_path_b) / np.min(weights_per_path_b))
     n_eff_A = len(multi_flux["first_crossings"][0])
     n_eff_B = len(multi_flux["first_crossings"][1])
     print(f"Effective counts for A and B: n_eff_A={n_eff_A}, n_eff_B={n_eff_B}")
